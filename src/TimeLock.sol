@@ -5,13 +5,12 @@ pragma solidity ^0.8.18;
 import {TimelockController} from "lib/openzeppelin-contracts/contracts/governance/TimelockController.sol";
 
 contract TimeLock is TimelockController {
-    // minDelay is how long you have to wait before executing...
-    // proposers is the list of addresses that can propose
-    // executors is the list of addresses that can execute
-
-    constructor(
-        uint256 minDelay,
-        address[] memory proposers,
-        address[] memory executors
-    ) TimelockController(minDelay, proposers, executors, msg.sender) {}
+    /**
+     * @param minDelay The minimum delay before execution
+     * @param proposers The addresses with proposer role
+     * @param executors The addresses with executor role
+     */
+    constructor(uint256 minDelay, address[] memory proposers, address[] memory executors)
+        TimelockController(minDelay, proposers, executors, msg.sender)
+    {}
 }

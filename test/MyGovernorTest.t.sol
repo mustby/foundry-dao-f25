@@ -11,10 +11,10 @@ import {GovToken} from "../src/GovToken.sol";
 contract MyGovernorTest is Test {
     MyGovernor _governor;
     Box _box;
-    TimeLock _timelock; // Is this just initializing the variables? I will learn later...
+    TimeLock _timelock; // Is this just initializing the variables? I will learn later...yes...essentially naming the contracts for internal use
     GovToken _govToken;
 
-    address public user = makeAddr("user");
+    address public USER = makeAddr("user");
     uint256 public constant INITIAL_SUPPLY = 100 ether;
 
     address[] _proposers;
@@ -24,16 +24,16 @@ contract MyGovernorTest is Test {
     bytes[] _calldatas;
     address[] _targets;
 
-    uint256 public constant MIN_DELAY = 3600; // 1 hour
+    uint256 public constant MIN_DELAY = 3600; // 1 hour - after a vote passes
     uint256 public constant VOTING_DELAY = 1; // how many blocks til a vote is active
     uint256 public constant VOTING_PERIOD = 50400; // how many blocks til a vote is closed
 
     function setUp() public {
         _govToken = new GovToken();
-        _govToken.mint(user, INITIAL_SUPPLY);
+        _govToken.mint(USER, INITIAL_SUPPLY);
 
-        vm.startPrank(user);
-        _govToken.delegate(user);
+        vm.startPrank(USER);
+        _govToken.delegate(USER);
         _timelock = new TimeLock(MIN_DELAY, _proposers, _executors);
         _governor = new MyGovernor(_govToken, _timelock);
 
@@ -43,7 +43,7 @@ contract MyGovernorTest is Test {
 
         _timelock.grantRole(proposerRole, address(_governor));
         _timelock.grantRole(executorRole, address(0));
-        _timelock.revokeRole(adminRole, user);
+        _timelock.revokeRole(adminRole, USER); // revote the admin role from USER to reduce centralization
 
         vm.stopPrank();
 
@@ -59,23 +59,17 @@ contract MyGovernorTest is Test {
     function testGovernanceUpdatesBox() public {
         uint256 valueToStore = 888;
         string memory description = "store 1 in Box";
-        bytes memory encodedFunctionCall = abi.encodeWithSignature(
-            "store(uint256)",
-            valueToStore
-        );
+        bytes memory encodedFunctionCall = abi.encodeWithSignature("store(uint256)", valueToStore);
 
-        _values.push(0);
+        _values.push(0); // not sending any ETH
         _calldatas.push(encodedFunctionCall);
         _targets.push(address(_box));
 
+        console.log("Box value before proposal: ", _box.getNumber());
+
         // 1. Propose to the DAO
 
-        uint256 proposalId = _governor.propose(
-            _targets,
-            _values,
-            _calldatas,
-            description
-        );
+        uint256 proposalId = _governor.propose(_targets, _values, _calldatas, description);
 
         // View the state
 
@@ -91,7 +85,7 @@ contract MyGovernorTest is Test {
         string memory reason = "cuz blue frog is cool";
 
         uint8 voteWay = 1; // voting yes
-        vm.prank(user);
+        vm.prank(USER);
 
         _governor.castVoteWithReason(proposalId, voteWay, reason);
 
@@ -110,7 +104,7 @@ contract MyGovernorTest is Test {
 
         _governor.execute(_targets, _values, _calldatas, descriptionHash);
 
-        console.log("Box value: ", _box.getNumber());
+        console.log("Box value after proposal: ", _box.getNumber());
         assert(_box.getNumber() == valueToStore);
     }
 }
